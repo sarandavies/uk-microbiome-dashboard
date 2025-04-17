@@ -2,42 +2,44 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
+import re
 
 st.set_page_config(layout="wide")
 
 # Load data
 df = pd.read_csv("UK_Microbiome_Organisations_with_coords.csv")
 
-# Clean whitespace and normalize text
+# Clean whitespace from all fields
 df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
-# Normalize Funding_Stage values explicitly
-df["Funding_Stage"] = df["Funding_Stage"].astype(str).str.strip().str.lower()
+# Define robust cleaner for Funding_Stage
+def clean_stage(val):
+    if pd.isna(val):
+        return "Unknown"
+    val = str(val).strip().lower()
+    val = re.sub(r"[\\u200b\\xa0]+", "", val)  # Remove zero-width and non-breaking spaces
+    val = val.replace("/", " / ").replace("-", " ").replace("grant", "seed")
+    val = val.replace("pre seed", "seed")
+    val = re.sub(r"\\s+", " ", val)
+    mapping = {
+        "seed": "Seed",
+        "seed / seed": "Seed",
+        "seed / grant": "Seed",
+        "series a": "Series A",
+        "series b": "Series B",
+        "series c": "Series C",
+        "public / private": "Public/Private",
+        "public": "Public",
+        "private": "Private",
+        "acquired": "Acquired",
+        "unknown": "Unknown"
+    }
+    return mapping.get(val, val.title())
 
-# Debug: print unique values to confirm
-# st.write("Funding Stage values before mapping:", df["Funding_Stage"].unique())
+# Apply cleaning
+df["Funding_Stage"] = df["Funding_Stage"].apply(clean_stage)
 
-# Standardize common variants
-stage_map = {
-    "seed": "Seed",
-    "seed/grant": "Seed",
-    "seed / grant": "Seed",
-    "pre-seed": "Seed",
-    "grant": "Seed",
-    "series a": "Series A",
-    "series b": "Series B",
-    "series c": "Series C",
-    "public/private": "Public/Private",
-    "private": "Private",
-    "public": "Public",
-    "acquired": "Acquired",
-    "unknown": "Unknown"
-}
-
-df["Funding_Stage"] = df["Funding_Stage"].map(lambda x: stage_map.get(x, x.title()))
-df["Funding_Stage"] = df["Funding_Stage"].fillna("Unknown")
-
-# Only keep rows with coordinates
+# Filter for rows with coordinates
 df = df[df["Latitude"].notna() & df["Longitude"].notna()].copy()
 
 # Sidebar checkbox for relevance filter
@@ -45,16 +47,19 @@ relevant_only = st.sidebar.checkbox("Show only Relevant companies", value=False)
 if relevant_only:
     df = df[df["Relevant"] == 1]
 
+# Add jitter to reduce overlap
 np.random.seed(42)
 df["Latitude"] += np.random.uniform(-0.05, 0.05, size=len(df))
 df["Longitude"] += np.random.uniform(-0.05, 0.05, size=len(df))
 
+# Header
 st.title("UK Microbiome Landscape Dashboard")
 st.markdown("Explore microbiome-related companies across the UK by target area, sector, and funding stage.")
 
-# Metric for number of companies shown
+# Metric
 st.metric("Companies displayed", len(df))
 
+# Filters
 sector_filter = st.sidebar.multiselect("Filter by Sector", options=df["Sector"].dropna().unique())
 target_filter = st.sidebar.multiselect("Filter by Target Area", options=df["Target_Area"].dropna().unique())
 
@@ -64,6 +69,7 @@ if sector_filter:
 if target_filter:
     filtered_df = filtered_df[filtered_df["Target_Area"].isin(target_filter)]
 
+# Map
 st.subheader("Interactive Map of Relevant UK Microbiome Companies")
 fig = px.scatter_mapbox(
     filtered_df,
@@ -85,6 +91,7 @@ fig.update_traces(marker=dict(size=12))
 fig.update_layout(mapbox_style="carto-positron", margin={"r":0,"t":0,"l":0,"b":0})
 st.plotly_chart(fig, use_container_width=True)
 
+# Charts
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("Distribution by Target Area")
@@ -109,5 +116,6 @@ with col2:
     ).update_traces(sort=True)
     st.plotly_chart(fig2, use_container_width=True)
 
+# Table
 st.subheader("Company Summary Table")
 st.dataframe(filtered_df[["Organisation", "Town", "Target_Area", "Sector", "Funding_Stage"]].reset_index(drop=True))
