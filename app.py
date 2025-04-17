@@ -9,9 +9,6 @@ st.set_page_config(layout="wide")
 # Load data
 df = pd.read_csv("UK_Microbiome_Organisations_with_coords.csv")
 
-# Clean whitespace from all fields
-df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-
 # Define robust cleaner for Funding_Stage
 def clean_stage(val):
     if pd.isna(val):
@@ -36,11 +33,16 @@ def clean_stage(val):
     }
     return mapping.get(val, val.title())
 
-# Apply cleaning
+# Strip whitespace from all fields except Funding_Stage
+for col in df.columns:
+    if col != "Funding_Stage":
+        df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+
+# Apply robust Funding_Stage cleaner
 df["Funding_Stage"] = df["Funding_Stage"].apply(clean_stage)
 
-# Optional: Print unique values to debug
-# st.write("Funding Stage values:", sorted(df["Funding_Stage"].unique()))
+# Optional debug
+# st.write("Unique Funding Stages:", sorted(df["Funding_Stage"].unique()))
 
 # Filter for rows with coordinates
 df = df[df["Latitude"].notna() & df["Longitude"].notna()].copy()
