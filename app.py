@@ -17,7 +17,7 @@ def clean_stage(val):
     if pd.isna(val):
         return "Unknown"
     val = str(val).strip().lower()
-    val = re.sub(r"[\\u200b\\xa0]+", "", val)  # Remove zero-width and non-breaking spaces
+    val = re.sub(r"[\\u200b\\xa0]", "", val)  # Remove invisible characters
     val = val.replace("/", " / ").replace("-", " ").replace("grant", "seed")
     val = val.replace("pre seed", "seed")
     val = re.sub(r"\\s+", " ", val)
@@ -38,6 +38,9 @@ def clean_stage(val):
 
 # Apply cleaning
 df["Funding_Stage"] = df["Funding_Stage"].apply(clean_stage)
+
+# Optional: Print unique values to debug
+# st.write("Funding Stage values:", sorted(df["Funding_Stage"].unique()))
 
 # Filter for rows with coordinates
 df = df[df["Latitude"].notna() & df["Longitude"].notna()].copy()
