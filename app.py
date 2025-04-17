@@ -6,7 +6,17 @@ import numpy as np
 st.set_page_config(layout="wide")
 
 df = pd.read_csv("UK_Microbiome_Organisations_with_coords.csv")
-df = df[(df["Relevant"] == 1) & df["Latitude"].notna() & df["Longitude"].notna()].copy()
+
+# Clean up any whitespace in text fields (like Funding Stage)
+df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+
+# Only keep rows with coordinates
+df = df[df["Latitude"].notna() & df["Longitude"].notna()].copy()
+
+# Sidebar checkbox for relevance filter
+relevant_only = st.sidebar.checkbox("Show only Relevant companies", value=False)
+if relevant_only:
+    df = df[df["Relevant"] == 1]
 
 np.random.seed(42)
 df["Latitude"] += np.random.uniform(-0.05, 0.05, size=len(df))
