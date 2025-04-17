@@ -8,15 +8,22 @@ st.set_page_config(layout="wide")
 # Load data
 df = pd.read_csv("UK_Microbiome_Organisations_with_coords.csv")
 
-# Clean up whitespace and lowercase all text
-df = df.applymap(lambda x: x.strip().lower() if isinstance(x, str) else x)
+# Clean whitespace and normalize text
+df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
-# Standardize Funding_Stage values
+# Normalize Funding_Stage values explicitly
+df["Funding_Stage"] = df["Funding_Stage"].astype(str).str.strip().str.lower()
+
+# Debug: print unique values to confirm
+# st.write("Funding Stage values before mapping:", df["Funding_Stage"].unique())
+
+# Standardize common variants
 stage_map = {
     "seed": "Seed",
-    "seed/": "Seed",
     "seed/grant": "Seed",
     "seed / grant": "Seed",
+    "pre-seed": "Seed",
+    "grant": "Seed",
     "series a": "Series A",
     "series b": "Series B",
     "series c": "Series C",
@@ -24,11 +31,10 @@ stage_map = {
     "private": "Private",
     "public": "Public",
     "acquired": "Acquired",
-    "unknown": "Unknown",
-    "grant": "Seed",
-    "pre-seed": "Seed"
+    "unknown": "Unknown"
 }
-df["Funding_Stage"] = df["Funding_Stage"].map(lambda x: stage_map.get(x, x.title() if isinstance(x, str) else x))
+
+df["Funding_Stage"] = df["Funding_Stage"].map(lambda x: stage_map.get(x, x.title()))
 df["Funding_Stage"] = df["Funding_Stage"].fillna("Unknown")
 
 # Only keep rows with coordinates
