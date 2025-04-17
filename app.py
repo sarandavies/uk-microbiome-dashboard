@@ -8,7 +8,12 @@ st.set_page_config(layout="wide")
 df = pd.read_csv("UK_Microbiome_Organisations_with_coords.csv")
 
 # Clean up any whitespace in text fields (like Funding Stage)
-df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+def clean_text(x):
+    if isinstance(x, str):
+        return x.strip().lower().title()
+    return x
+
+df = df.applymap(clean_text)
 
 # Only keep rows with coordinates
 df = df[df["Latitude"].notna() & df["Longitude"].notna()].copy()
