@@ -88,3 +88,4 @@ with col2:
 # ✅ Table
 st.subheader("Company Summary Table")
 st.dataframe(filtered_df[["Organisation", "Town", "Target_Area", "Sector", "Funding_Stage"]].reset_index(drop=True))
+# last updated: fixed funding stage pie issue
