@@ -7,7 +7,7 @@ import numpy as np
 st.set_page_config(layout="wide")
 
 # ✅ Load cleaned data
-df = pd.read_csv("/Users/saran/uk-microbiome-dashboard/UK_Microbiome_Organisations_CLEANED.csv")
+df = pd.read_csv("UK_Microbiome_Organisations_CLEANED.csv")
 
 # ✅ Only keep rows with coordinates
 df = df[df["Latitude"].notna() & df["Longitude"].notna()].copy()
