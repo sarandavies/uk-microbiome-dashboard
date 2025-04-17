@@ -5,15 +5,31 @@ import numpy as np
 
 st.set_page_config(layout="wide")
 
+# Load data
 df = pd.read_csv("UK_Microbiome_Organisations_with_coords.csv")
 
-# Clean up any whitespace in text fields (like Funding Stage)
-def clean_text(x):
-    if isinstance(x, str):
-        return x.strip().lower().title()
-    return x
+# Clean up whitespace and lowercase all text
+df = df.applymap(lambda x: x.strip().lower() if isinstance(x, str) else x)
 
-df = df.applymap(clean_text)
+# Standardize Funding_Stage values
+stage_map = {
+    "seed": "Seed",
+    "seed/": "Seed",
+    "seed/grant": "Seed",
+    "seed / grant": "Seed",
+    "series a": "Series A",
+    "series b": "Series B",
+    "series c": "Series C",
+    "public/private": "Public/Private",
+    "private": "Private",
+    "public": "Public",
+    "acquired": "Acquired",
+    "unknown": "Unknown",
+    "grant": "Seed",
+    "pre-seed": "Seed"
+}
+df["Funding_Stage"] = df["Funding_Stage"].map(lambda x: stage_map.get(x, x.title() if isinstance(x, str) else x))
+df["Funding_Stage"] = df["Funding_Stage"].fillna("Unknown")
 
 # Only keep rows with coordinates
 df = df[df["Latitude"].notna() & df["Longitude"].notna()].copy()
@@ -29,6 +45,9 @@ df["Longitude"] += np.random.uniform(-0.05, 0.05, size=len(df))
 
 st.title("UK Microbiome Landscape Dashboard")
 st.markdown("Explore microbiome-related companies across the UK by target area, sector, and funding stage.")
+
+# Metric for number of companies shown
+st.metric("Companies displayed", len(df))
 
 sector_filter = st.sidebar.multiselect("Filter by Sector", options=df["Sector"].dropna().unique())
 target_filter = st.sidebar.multiselect("Filter by Target Area", options=df["Target_Area"].dropna().unique())
@@ -64,13 +83,24 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Distribution by Target Area")
     target_counts = filtered_df["Target_Area"].value_counts()
-    fig1 = px.bar(target_counts, x=target_counts.index, y=target_counts.values, labels={"x": "Target Area", "y": "Count"})
+    fig1 = px.bar(
+        target_counts,
+        x=target_counts.index,
+        y=target_counts.values,
+        labels={"x": "Target Area", "y": "Count"}
+    )
     st.plotly_chart(fig1, use_container_width=True)
 
 with col2:
     st.subheader("Funding Stage Breakdown")
     funding_counts = filtered_df["Funding_Stage"].value_counts()
-    fig2 = px.pie(funding_counts, values=funding_counts.values, names=funding_counts.index, title="Funding Stage")
+    fig2 = px.pie(
+        funding_counts,
+        values=funding_counts.values,
+        names=funding_counts.index,
+        title="Funding Stage",
+        hole=0.3
+    ).update_traces(sort=True)
     st.plotly_chart(fig2, use_container_width=True)
 
 st.subheader("Company Summary Table")
